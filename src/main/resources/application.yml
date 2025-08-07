@@ -5,7 +5,7 @@ springdoc:
     path: /api-docs
 
 server:
-  port: 8080
+  port: 8081
 
 spring:
   datasource:
