@@ -42,7 +42,7 @@ class UserControllerTest {
         testUser.setId(1L);
         testUser.setEmail("test@example.com");
         testUser.setName("테스트 사용자");
-        testUser.setPhone("010-1234-5678");
+        testUser.setPhone_number("010-1234-5678");
         testUser.setCreatedAt(LocalDateTime.now());
     }
 
@@ -96,13 +96,13 @@ class UserControllerTest {
         User newUser = new User();
         newUser.setEmail("new@example.com");
         newUser.setName("새 사용자");
-        newUser.setPhone("010-9876-5432");
+        newUser.setPhone_number("010-9876-5432");
 
         User createdUser = new User();
         createdUser.setId(2L);
         createdUser.setEmail("new@example.com");
         createdUser.setName("새 사용자");
-        createdUser.setPhone("010-9876-5432");
+        createdUser.setPhone_number("010-9876-5432");
         createdUser.setCreatedAt(LocalDateTime.now());
 
         when(userService.createUser(any(User.class))).thenReturn(createdUser);
@@ -125,13 +125,13 @@ class UserControllerTest {
         // Given
         User updateUser = new User();
         updateUser.setName("수정된 사용자");
-        updateUser.setPhone("010-1111-2222");
+        updateUser.setPhone_number("010-1111-2222");
 
         User updatedUser = new User();
         updatedUser.setId(1L);
         updatedUser.setEmail("test@example.com");
         updatedUser.setName("수정된 사용자");
-        updatedUser.setPhone("010-1111-2222");
+        updatedUser.setPhone_number("010-1111-2222");
         updatedUser.setCreatedAt(LocalDateTime.now());
 
         when(userService.updateUser(eq(1L), any(User.class))).thenReturn(updatedUser);
@@ -144,7 +144,7 @@ class UserControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("수정된 사용자"))
-                .andExpect(jsonPath("$.phone").value("010-1111-2222"));
+                .andExpect(jsonPath("$.phone_number").value("010-1111-2222"));
 
         verify(userService, times(1)).updateUser(eq(1L), any(User.class));
     }
