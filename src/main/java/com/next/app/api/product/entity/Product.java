@@ -1,4 +1,4 @@
-package com.next.app.api.user.entity;
+package com.next.app.api.product.entity;
 // Product 클래스는 오류 없애기위한 파일이니 추후 삭제 예정
 
 import jakarta.persistence.*;

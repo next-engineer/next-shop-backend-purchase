@@ -1,4 +1,4 @@
-package com.next.app.api.user.entity;
+package com.next.app.api.cart.entity;
 
 import com.next.app.api.user.entity.User;
 import jakarta.persistence.*;
