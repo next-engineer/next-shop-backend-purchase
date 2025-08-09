@@ -31,8 +31,12 @@ public class Order {
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
-    @Column(nullable = false, length = 50)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OrderStatus status = OrderStatus.PENDING;
+
+    @Column(name = "delivery_address", length = 255, nullable = false)
+    private String deliveryAddress;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

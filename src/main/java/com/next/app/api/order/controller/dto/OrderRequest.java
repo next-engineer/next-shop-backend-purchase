@@ -8,8 +8,10 @@ import java.util.List;
 @Data
 public class OrderRequest {
     private Long userId;
+    private BigDecimal totalPrice;
     private String status;
     private List<Item> items;
+    private String deliveryAddress;
 
     @Data
     public static class Item {
