@@ -1,8 +1,8 @@
 package com.next.app.api.order.controller;
 
 import com.next.app.api.order.controller.dto.OrderItemResponse;
-import com.next.app.api.order.controller.dto.OrderResponse;
 import com.next.app.api.order.controller.dto.OrderRequest;
+import com.next.app.api.order.controller.dto.OrderResponse;
 import com.next.app.api.order.entity.Order;
 import com.next.app.api.order.entity.OrderItem;
 import com.next.app.api.order.entity.OrderStatus;
@@ -22,9 +22,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
-@Tag(name = "Order Controller", description = "주문 관리 API")
+@Tag(name = "Order", description = "주문 API")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost")
 public class OrderController {
 
     private final OrderService orderService;
@@ -32,24 +31,57 @@ public class OrderController {
     private final ProductRepository productRepository;
 
     @GetMapping
-    @Operation(summary = "모든 주문 조회", description = "주문자/배송지/아이템/총액/상태 포함")
+    @Operation(summary = "주문 목록 조회")
     public List<OrderResponse> getAllOrders() {
         List<Order> orders = orderService.getAllOrdersWithItems();
         return orders.stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "주문 조회", description = "주문자/배송지/아이템/총액/상태 포함")
+    @Operation(summary = "주문 단건 조회")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
         return orderService.getOrderByIdWithItems(id)
                 .map(o -> ResponseEntity.ok(toResponse(o)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping
+    @Operation(summary = "주문 생성")
+    public ResponseEntity<OrderResponse> create(@RequestBody OrderRequest request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getUserId()));
+
+        List<OrderItem> items = request.getItems().stream().map(i -> {
+            Product product = productRepository.findById(i.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found: " + i.getProductId()));
+            OrderItem item = new OrderItem();
+            item.setProduct(product);
+            item.setQuantity(i.getQuantity());
+            item.setPrice(BigDecimal.valueOf(product.getPrice()));
+            return item;
+        }).toList();
+
+        Order order = orderService.createOrder(user, items, request.getDeliveryAddress());
+        return ResponseEntity.ok(toResponse(order));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "주문 상태 변경", description = "PENDING, PAID, SHIPPED, CANCELLED, REFUNDED")
+    public ResponseEntity<OrderResponse> updateStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
+        Order updated = orderService.updateOrderStatus(id, status);
+        return ResponseEntity.ok(toResponse(updated));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "주문 삭제")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.ok().build();
+    }
+
     private OrderResponse toResponse(Order o) {
         List<OrderItemResponse> itemResponses = o.getOrderItems().stream()
-                .map(this::toItemResponse)
-                .toList();
+                .map(this::toItemResponse).toList();
 
         return new OrderResponse(
                 o.getId(),
@@ -63,60 +95,13 @@ public class OrderController {
     }
 
     private OrderItemResponse toItemResponse(OrderItem oi) {
-        BigDecimal price = oi.getPrice(); // order_items 저장된 단가
-        BigDecimal lineTotal = price.multiply(BigDecimal.valueOf(oi.getQuantity()));
-
+        BigDecimal lineTotal = oi.getPrice().multiply(BigDecimal.valueOf(oi.getQuantity()));
         return new OrderItemResponse(
-                (oi.getProduct() != null ? oi.getProduct().getId() : null),
-                (oi.getProduct() != null ? oi.getProduct().getName() : null),
+                oi.getProduct() != null ? oi.getProduct().getId() : null,
+                oi.getProduct() != null ? oi.getProduct().getName() : null,
                 oi.getQuantity(),
-                price,
+                oi.getPrice(),
                 lineTotal
         );
-    }
-
-    @PostMapping
-    @Operation(summary = "주문 생성", description = "새로운 주문 생성.")
-    public Order createOrder(@RequestBody OrderRequest request) {
-        //기존 저장된 user_id 가져옴
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        List<OrderItem> items = request.getItems().stream().map(i -> {
-
-            //db에 저장된 product 정보를 사용
-            Product product = productRepository.findById(i.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found"));
-
-            OrderItem item = new OrderItem();
-            item.setProduct(product);
-            item.setQuantity(i.getQuantity());
-            item.setPrice(BigDecimal.valueOf(product.getPrice()));
-            return item;
-        }).toList();
-
-        return orderService.createOrder(
-                user,
-                items,
-                request.getDeliveryAddress()
-        );
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "주문 수정", description = "주문 상태 수정. (PENDING, PAID, SHIPPED, CANCELLED, REFUNDED)")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestParam OrderStatus status) {
-        try {
-            Order updatedOrder = orderService.updateOrderStatus(id, status);
-            return ResponseEntity.ok(updatedOrder);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "주문 삭제", description = "주문 삭제.")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        orderService.deleteOrder(id);
-        return ResponseEntity.ok().build();
     }
 }
