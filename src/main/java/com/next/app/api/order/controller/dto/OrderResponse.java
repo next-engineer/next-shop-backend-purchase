@@ -23,12 +23,4 @@ public class OrderResponse {
         this.createdAt = createdAt;
         this.items = items;
     }
-
-    public Long getOrderId() { return orderId; }
-    public Long getUserId() { return userId; }
-    public String getDeliveryAddress() { return deliveryAddress; }
-    public String getStatus() { return status; }
-    public BigDecimal getTotalPrice() { return totalPrice; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public List<OrderItemResponse> getItems() { return items; }
 }

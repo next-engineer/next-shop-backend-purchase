@@ -17,10 +17,4 @@ public class OrderItemResponse {
         this.price = price;
         this.lineTotal = lineTotal;
     }
-
-    public Long getProductId() { return productId; }
-    public String getProductName() { return productName; }
-    public int getQuantity() { return quantity; }
-    public BigDecimal getPrice() { return price; }
-    public BigDecimal getLineTotal() { return lineTotal; }
 }
