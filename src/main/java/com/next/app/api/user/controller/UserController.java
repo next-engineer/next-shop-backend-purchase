@@ -34,7 +34,7 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping("/register")
     @Operation(summary = "회원가입", description = "새로운 사용자를 생성합니다.")
     public User createUser(@RequestBody User user) {
         return userService.createUser(user);
