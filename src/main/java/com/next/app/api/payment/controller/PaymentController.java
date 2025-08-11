@@ -1,7 +1,7 @@
 package com.next.app.api.payment.controller;
 
-import com.next.app.api.payment.dto.PaymentRequestDto;
-import com.next.app.api.payment.dto.PaymentResponseDto;
+import com.next.app.api.payment.controller.dto.PaymentRequestDto;
+import com.next.app.api.payment.controller.dto.PaymentResponseDto;
 import com.next.app.api.payment.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

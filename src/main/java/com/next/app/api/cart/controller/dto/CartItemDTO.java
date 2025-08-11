@@ -1,4 +1,4 @@
-package com.next.app.api.cart.dto;
+package com.next.app.api.cart.controller.dto;
 
 public class CartItemDTO {
     private Long id;
