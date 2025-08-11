@@ -1,12 +1,12 @@
-package com.next.app.api.user.service;
+package com.next.app.api.cart.service;
 
-import com.next.app.api.user.entity.Cart;
-import com.next.app.api.user.entity.CartItem;
-import com.next.app.api.user.entity.Product;
+import com.next.app.api.cart.entity.Cart;
+import com.next.app.api.cart.entity.CartItem;
+import com.next.app.api.product.entity.Product;
 import com.next.app.api.user.entity.User;
-import com.next.app.api.user.repository.CartItemRepository;
-import com.next.app.api.user.repository.CartRepository;
-import com.next.app.api.user.repository.ProductRepository;
+import com.next.app.api.cart.repository.CartItemRepository;
+import com.next.app.api.cart.repository.CartRepository;
+import com.next.app.api.product.repository.ProductRepository;
 import com.next.app.api.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
