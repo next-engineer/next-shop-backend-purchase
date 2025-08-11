@@ -1,5 +1,6 @@
 package com.next.app.api.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.next.app.api.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -11,6 +12,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Cart {
 
     @Id
