@@ -1,6 +1,6 @@
 package com.next.app.api.cart.controller;
 
-import com.next.app.api.cart.entity.CartItem;
+import com.next.app.api.cart.dto.CartItemDTO;
 import com.next.app.api.cart.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,19 +22,19 @@ public class CartController {
 
     @GetMapping("/{userId}")
     @Operation(summary = "유저 장바구니 조회", description = "유저 ID로 장바구니 목록을 조회합니다.")
-    public ResponseEntity<List<CartItem>> getCartItems(@PathVariable Long userId) {
-        List<CartItem> items = cartService.getCartItemsByUserId(userId);
+    public ResponseEntity<List<CartItemDTO>> getCartItems(@PathVariable Long userId) {
+        List<CartItemDTO> items = cartService.getCartItemsByUserId(userId);
         return ResponseEntity.ok(items);
     }
 
     @PostMapping("/{userId}/add")
     @Operation(summary = "장바구니에 상품 추가", description = "유저 장바구니에 상품과 수량을 추가합니다.")
-    public ResponseEntity<CartItem> addProductToCart(
+    public ResponseEntity<CartItemDTO> addProductToCart(
             @PathVariable Long userId,
             @RequestParam Long productId,
             @RequestParam int quantity) {
 
-        CartItem item = cartService.addProductToCart(userId, productId, quantity);
+        CartItemDTO item = cartService.addProductToCart(userId, productId, quantity);
         return ResponseEntity.ok(item);
     }
 

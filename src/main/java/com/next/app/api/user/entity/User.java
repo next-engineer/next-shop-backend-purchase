@@ -1,9 +1,12 @@
 package com.next.app.api.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 
 @Entity
@@ -11,6 +14,8 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE users SET deleted = true WHERE id = ?")
+@Where(clause = "deleted = false")
 public class User {
 
     @Id
@@ -31,6 +36,12 @@ public class User {
 
     @Column(length = 20)
     private String phone_number;
+
+    @Column(nullable = false)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private boolean deleted = false;
+
+
 
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;
