@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -23,67 +24,67 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponseDto pay(PaymentRequestDto req) {
-        Order order = orderService.getOrderByIdWithItems(req.getOrderId())
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + req.getOrderId()));
+        if (req == null || req.getOrderId() == null) throw new IllegalArgumentException("orderId is required");
+        if (req.getPaymentMethod() == null) throw new IllegalArgumentException("paymentMethod is required");
 
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new IllegalStateException("Order status must be PENDING");
+        Order order = orderService.getOrderOrThrow(req.getOrderId());
+        if (order.getStatus() == OrderStatus.PAID) throw new IllegalStateException("Order is already PAID");
+
+        Payment payment = new Payment();
+        payment.setOrder(order);
+        payment.setPaymentMethod(req.getPaymentMethod().toUpperCase());
+        switch (payment.getPaymentMethod()) {
+            case "CARD" -> payment.setCardNumber(maskCard(req.getPaymentInfo()));
+            case "BANK" -> payment.setBankAccount(maskAccount(req.getPaymentInfo()));
+            default -> throw new IllegalArgumentException("Unsupported payment method: " + req.getPaymentMethod());
         }
-
-        Payment p = new Payment();
-        p.setOrder(order);
-        p.setPaymentMethod(req.getPaymentMethod());
-
-        if ("CARD".equalsIgnoreCase(req.getPaymentMethod())) {
-            p.setCardNumber(maskCard(req.getPaymentInfo()));
-            p.setBankAccount(null);
-        } else if ("BANK".equalsIgnoreCase(req.getPaymentMethod())) {
-            p.setBankAccount(maskBank(req.getPaymentInfo()));
-            p.setCardNumber(null);
-        } else {
-            throw new IllegalArgumentException("Unsupported payment method");
-        }
-
-        p.setPaidAt(LocalDateTime.now());
-        Payment saved = paymentRepository.save(p);
+        payment.setPaidAt(LocalDateTime.now());
+        Payment saved = paymentRepository.save(payment);
 
         orderService.updateOrderStatus(order.getId(), OrderStatus.PAID);
-
         return toDto(saved);
     }
 
     @Transactional
-    public PaymentResponseDto cancelPayment(Long paymentId) {
-        Payment p = paymentRepository.findById(paymentId)
+    public PaymentResponseDto cancel(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
 
-        if (p.getCancelledAt() != null) {
-            return toDto(p);
-        }
+        if (payment.getCancelledAt() != null) return toDto(payment);
 
-        p.setCancelledAt(LocalDateTime.now());
-        Payment saved = paymentRepository.save(p);
+        payment.setCancelledAt(LocalDateTime.now());
+        Payment saved = paymentRepository.save(payment);
 
-        if (p.getOrder() != null) {
-            orderService.updateOrderStatus(p.getOrder().getId(), OrderStatus.CANCELLED);
-        }
+        Order order = payment.getOrder();
+        if (order != null) orderService.updateOrderStatus(order.getId(), OrderStatus.CANCELLED);
 
         return toDto(saved);
     }
 
     @Transactional(readOnly = true)
-    public Optional<PaymentResponseDto> getPayment(Long paymentId) {
-        return paymentRepository.findById(paymentId).map(this::toDto);
+    public Optional<PaymentResponseDto> getPayment(Long id) {
+        return paymentRepository.findById(id).map(this::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentResponseDto> listByOrderId(Long orderId) {
+        return paymentRepository.findByOrder_Id(orderId).stream().map(this::toDto).toList();
     }
 
     private String maskCard(String raw) {
-        if (raw == null || raw.length() < 4) return "****";
-        return "****-****-****-" + raw.substring(raw.length() - 4);
+        if (raw == null || raw.isBlank()) return null;
+        String digits = raw.replaceAll("\\D", "");
+        if (digits.length() < 4) return "****";
+        String last4 = digits.substring(digits.length() - 4);
+        return "****-****-****-" + last4;
     }
 
-    private String maskBank(String raw) {
-        if (raw == null || raw.length() < 4) return "****";
-        return "****" + raw.substring(raw.length() - 4);
+    private String maskAccount(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String digits = raw.replaceAll("\\D", "");
+        if (digits.length() <= 4) return "****";
+        String last4 = digits.substring(digits.length() - 4);
+        return "****" + last4;
     }
 
     private PaymentResponseDto toDto(Payment p) {
