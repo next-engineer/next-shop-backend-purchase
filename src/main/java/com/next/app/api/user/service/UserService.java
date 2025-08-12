@@ -27,7 +27,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<User> getAllUsers() {
         return userRepository.findAllByDeletedFalse();
-}
+    }
 
     @Transactional(readOnly = true)
     public Optional<User> getUserById(Long id) {
