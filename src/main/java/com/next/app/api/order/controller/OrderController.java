@@ -57,7 +57,7 @@ public class OrderController {
             OrderItem item = new OrderItem();
             item.setProduct(product);
             item.setQuantity(i.getQuantity());
-            item.setPrice(BigDecimal.valueOf(product.getPrice()));
+            item.setPrice(product.getPrice());
             return item;
         }).toList();
 

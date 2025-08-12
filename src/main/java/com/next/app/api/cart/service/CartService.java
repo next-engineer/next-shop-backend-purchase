@@ -51,12 +51,12 @@ public class CartService {
                     newItem.setCart(cart);
                     newItem.setProductId(product.getId());
                     newItem.setQuantity(0);
-                    newItem.setPrice(BigDecimal.valueOf(product.getPrice()));
+                    newItem.setPrice(product.getPrice());
                     return newItem;
                 });
 
         cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
-        cartItem.setPrice(BigDecimal.valueOf(product.getPrice())); // 가격 보정
+        cartItem.setPrice(product.getPrice()); // 가격 보정
         cartItemRepository.save(cartItem);
 
         cart.addItem(cartItem);
