@@ -1,4 +1,4 @@
-package com.next.app.api.payment.dto;
+package com.next.app.api.payment.controller.dto;
 
 import java.time.LocalDateTime;
 

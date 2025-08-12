@@ -1,57 +1,52 @@
 package com.next.app.api.cart.controller;
 
-import com.next.app.api.cart.entity.CartItem;
+import com.next.app.api.cart.controller.dto.CartRequest;
+import com.next.app.api.cart.controller.dto.CartResponse;
 import com.next.app.api.cart.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
+@Tag(name = "Cart API", description = "장바구니 관련 API")
 @RestController
-@RequestMapping("/api/carts")
-@Tag(name = "Cart Controller", description = "장바구니 관리 API")
-@CrossOrigin(origins = "http://localhost")
+@RequiredArgsConstructor
+@RequestMapping("/api/cart")
 public class CartController {
 
-    @Autowired
-    private CartService cartService;
+    private final CartService cartService;
 
-    @GetMapping("/{userId}")
-    @Operation(summary = "유저 장바구니 조회", description = "유저 ID로 장바구니 목록을 조회합니다.")
-    public ResponseEntity<List<CartItem>> getCartItems(@PathVariable Long userId) {
-        List<CartItem> items = cartService.getCartItemsByUserId(userId);
-        return ResponseEntity.ok(items);
+    @Operation(summary = "장바구니 조회", description = "유저 ID로 장바구니 목록을 조회합니다.")
+    @GetMapping
+    public ResponseEntity<CartResponse> getCart(@RequestParam Long userId) {
+        return ResponseEntity.ok(cartService.getCart(userId));
     }
 
-    @PostMapping("/{userId}/add")
     @Operation(summary = "장바구니에 상품 추가", description = "유저 장바구니에 상품과 수량을 추가합니다.")
-    public ResponseEntity<CartItem> addProductToCart(
-            @PathVariable Long userId,
-            @RequestParam Long productId,
-            @RequestParam int quantity) {
-
-        CartItem item = cartService.addProductToCart(userId, productId, quantity);
-        return ResponseEntity.ok(item);
+    @PostMapping
+    public ResponseEntity<CartResponse> addItem(
+            @RequestParam Long userId,
+            @Valid @RequestBody CartRequest request
+    ) {
+        return ResponseEntity.ok(cartService.addItem(userId, request));
     }
 
-    @DeleteMapping("/{userId}/remove")
-    @Operation(summary = "장바구니에서 상품 제거", description = "유저 장바구니에서 특정 상품을 제거합니다.")
-    public ResponseEntity<Void> removeProductFromCart(
-            @PathVariable Long userId,
-            @RequestParam Long productId) {
-
-        cartService.removeProductFromCart(userId, productId);
-        return ResponseEntity.ok().build();
+    @Operation(summary = "장바구니 수량 변경", description = "유저 장바구니에서 특정 상품을 제거합니다.")
+    @PutMapping("/{productId}")
+    public ResponseEntity<CartResponse> updateQuantity(
+            @RequestParam Long userId,
+            @PathVariable Long productId,
+            @RequestParam int quantity
+    ) {
+        return ResponseEntity.ok(cartService.updateItemQuantity(userId, productId, quantity));
     }
 
-    @DeleteMapping("/{userId}/clear")
     @Operation(summary = "장바구니 비우기", description = "유저 장바구니 내 모든 상품을 제거합니다.")
-    public ResponseEntity<Void> clearCart(@PathVariable Long userId) {
+    @DeleteMapping
+    public ResponseEntity<Void> clearCart(@RequestParam Long userId) {
         cartService.clearCart(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }
