@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/payments")
 @Tag(name = "Payment", description = "결제 API")
@@ -18,15 +20,15 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    @Operation(summary = "결제 처리")
+    @Operation(summary = "결제 생성/승인")
     public ResponseEntity<PaymentResponseDto> pay(@RequestBody PaymentRequestDto req) {
         return ResponseEntity.ok(paymentService.pay(req));
     }
 
     @PostMapping("/{paymentId}/cancel")
-    @Operation(summary = "결제 취소")
+    @Operation(summary = "결제 취소/환불")
     public ResponseEntity<PaymentResponseDto> cancel(@PathVariable Long paymentId) {
-        return ResponseEntity.ok(paymentService.cancelPayment(paymentId));
+        return ResponseEntity.ok(paymentService.cancel(paymentId));
     }
 
     @GetMapping("/{paymentId}")
@@ -35,5 +37,12 @@ public class PaymentController {
         return paymentService.getPayment(paymentId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+
+    @GetMapping
+    @Operation(summary = "주문 기준 결제 이력 조회", description = "예: /api/payments?orderId=1")
+    public ResponseEntity<List<PaymentResponseDto>> listByOrder(@RequestParam Long orderId) {
+        return ResponseEntity.ok(paymentService.listByOrderId(orderId));
     }
 }
