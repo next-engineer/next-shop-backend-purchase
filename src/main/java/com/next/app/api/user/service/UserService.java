@@ -15,7 +15,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder; // Config에서만 생성
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public List<User> listUsersAny() {
@@ -54,9 +54,15 @@ public class UserService {
         User user = userRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("수정할 사용자가 존재하지 않거나 삭제된 계정입니다: " + id));
 
-        if (userDetails.getName() != null) user.setName(userDetails.getName());
-        if (userDetails.getPhone_number() != null) user.setPhone_number(userDetails.getPhone_number());
-        if (userDetails.getDelivery_address() != null) user.setDelivery_address(userDetails.getDelivery_address());
+        if (userDetails.getName() != null) {
+            user.setName(userDetails.getName());
+        }
+        if (userDetails.getPhone_number() != null) { // snake_case getter
+            user.setPhone_number(userDetails.getPhone_number());
+        }
+        if (userDetails.getDelivery_address() != null) { // snake_case getter
+            user.setDelivery_address(userDetails.getDelivery_address());
+        }
 
         if (userDetails.getPassword() != null && !userDetails.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(userDetails.getPassword()));

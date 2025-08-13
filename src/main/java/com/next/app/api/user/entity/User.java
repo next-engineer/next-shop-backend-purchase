@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
-
 @Entity
 @Table(name = "users")
 @Data
@@ -32,23 +31,20 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String delivery_address;
+    private String delivery_address;  // snake_case
 
     @Column(length = 20)
-    private String phone_number;
+    private String phone_number;      // snake_case
 
     @Column(nullable = false)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted = false;
-
-
 
     @Column(name = "created_at")
     private java.time.LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private java.time.LocalDateTime updateAt;
-
 
     @PrePersist
     protected void onCreate() {
@@ -57,5 +53,7 @@ public class User {
     }
 
     @PreUpdate
-    protected void onUpdate() {updateAt = java.time.LocalDateTime.now();}
+    protected void onUpdate() {
+        updateAt = java.time.LocalDateTime.now();
+    }
 }

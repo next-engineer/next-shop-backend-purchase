@@ -1,14 +1,22 @@
 package com.next.app.api.order.service;
 
+import com.next.app.api.cart.entity.Cart;
+import com.next.app.api.cart.entity.CartItem;
+import com.next.app.api.cart.repository.CartRepository;
 import com.next.app.api.order.entity.Order;
+import com.next.app.api.order.entity.OrderItem;
 import com.next.app.api.order.entity.OrderStatus;
 import com.next.app.api.order.repository.OrderRepository;
+import com.next.app.api.product.entity.Product;
+import com.next.app.api.product.repository.ProductRepository;
 import com.next.app.api.user.entity.User;
+import com.next.app.api.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +27,9 @@ import java.util.Optional;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    // 필요한 경우 다른 Repository나 Service 주입
+    private final UserRepository userRepository;
+    private final CartRepository cartRepository;
+    private final ProductRepository productRepository;
 
     @Transactional(readOnly = true)
     public Optional<Order> getOrder(Long id) {
@@ -38,12 +48,49 @@ public class OrderService {
     }
 
     public Order createOrderFromCart(Long userId) {
-        // 장바구니 기반 주문 생성 로직
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));
+
+        if (cart.getItems().isEmpty()) {
+            throw new IllegalStateException("장바구니가 비어 있습니다.");
+        }
+
         Order order = new Order();
-        order.setCreatedAt(LocalDateTime.now());
+        order.setUser(user);
+        order.setDeliveryAddress(user.getDelivery_address()); // snake_case getter
         order.setStatus(OrderStatus.PENDING);
-        // userId, items 등 채움
-        return orderRepository.save(order);
+        order.setCreatedAt(LocalDateTime.now());
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (CartItem cartItem : cart.getItems()) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(order);
+
+            Product product = productRepository.findById(cartItem.getProductId())
+                    .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다."));
+            orderItem.setProduct(product);
+            orderItem.setQuantity(cartItem.getQuantity());
+
+            BigDecimal price = cartItem.getPrice() != null ? cartItem.getPrice() : BigDecimal.ZERO;
+            orderItem.setPrice(price);
+
+            total = total.add(price.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+            order.getOrderItems().add(orderItem);
+        }
+
+        order.setTotalPrice(total);
+
+        Order savedOrder = orderRepository.save(order);
+
+        cart.getItems().clear();
+        cart.calculateTotalPrice();
+        cartRepository.save(cart);
+
+        return savedOrder;
     }
 
     public Order createOrder(Object orderRequest, User user) {
@@ -51,7 +98,6 @@ public class OrderService {
         order.setUser(user);
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
-        // orderRequest의 데이터 채움
         return orderRepository.save(order);
     }
 
@@ -66,7 +112,6 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
-    /** 지정한 주문이 해당 사용자의 것인지 확인 */
     @Transactional(readOnly = true)
     public boolean isOrderOwner(Long orderId, Long userId) {
         return orderRepository.findById(orderId)
@@ -74,4 +119,3 @@ public class OrderService {
                 .orElse(false);
     }
 }
-
