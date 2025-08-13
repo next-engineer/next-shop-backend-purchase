@@ -2,22 +2,20 @@ package com.next.app.api.user.service;
 
 import com.next.app.api.user.entity.User;
 import com.next.app.api.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder; // Config에서만 생성
 
     @Transactional(readOnly = true)
     public List<User> listUsersAny() {
@@ -39,8 +37,6 @@ public class UserService {
         return userRepository.findRawById(id);
     }
 
-
-
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
@@ -58,7 +54,6 @@ public class UserService {
         User user = userRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("수정할 사용자가 존재하지 않거나 삭제된 계정입니다: " + id));
 
-        //user.setEmail(userDetails.getEmail());
         if (userDetails.getName() != null) user.setName(userDetails.getName());
         if (userDetails.getPhone_number() != null) user.setPhone_number(userDetails.getPhone_number());
         if (userDetails.getDelivery_address() != null) user.setDelivery_address(userDetails.getDelivery_address());

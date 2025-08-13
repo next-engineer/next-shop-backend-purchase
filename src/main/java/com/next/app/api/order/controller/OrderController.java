@@ -7,10 +7,13 @@ import com.next.app.api.order.entity.Order;
 import com.next.app.api.order.entity.OrderItem;
 import com.next.app.api.order.entity.OrderStatus;
 import com.next.app.api.order.service.OrderService;
+import com.next.app.api.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -27,30 +30,35 @@ public class OrderController {
 
     @GetMapping("/{id}")
     @Operation(summary = "주문 단건 조회")
-    public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id,
+                                                      @AuthenticationPrincipal User user) {
+        if (!orderService.isOrderOwner(id, user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return orderService.getOrder(id)
                 .map(o -> ResponseEntity.ok(toResponse(o)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    @Operation(summary = "사용자 주문 이력 조회", description = "예: /api/orders?userId=1")
-    public ResponseEntity<List<OrderResponse>> listByUser(@RequestParam Long userId) {
-        List<Order> orders = orderService.listByUser(userId);
+    @Operation(summary = "내 주문 이력 조회")
+    public ResponseEntity<List<OrderResponse>> listByUser(@AuthenticationPrincipal User user) {
+        List<Order> orders = orderService.listByUser(user.getId());
         return ResponseEntity.ok(orders.stream().map(this::toResponse).toList());
     }
 
     @PostMapping
-    @Operation(summary = "주문 생성 (직접 아이템 전달)")
-    public ResponseEntity<OrderResponse> create(@RequestBody OrderRequest request) {
-        Order created = orderService.createOrder(request);
+    @Operation(summary = "주문 생성")
+    public ResponseEntity<OrderResponse> create(@AuthenticationPrincipal User user,
+                                                @RequestBody OrderRequest request) {
+        Order created = orderService.createOrder(request, user);
         return ResponseEntity.ok(toResponse(created));
     }
 
     @PostMapping("/checkout")
-    @Operation(summary = "장바구니 → 주문 생성", description = "userId의 장바구니를 주문으로 변환하고 장바구니를 비웁니다.")
-    public ResponseEntity<OrderResponse> checkout(@RequestParam Long userId) {
-        Order created = orderService.createOrderFromCart(userId);
+    @Operation(summary = "장바구니 주문 생성 후 비우기")
+    public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal User user) {
+        Order created = orderService.createOrderFromCart(user.getId());
         return ResponseEntity.ok(toResponse(created));
     }
 
@@ -71,7 +79,6 @@ public class OrderController {
     private OrderResponse toResponse(Order o) {
         List<OrderItemResponse> items = o.getOrderItems() == null ? List.of() :
                 o.getOrderItems().stream().map(this::toItemResponse).collect(Collectors.toList());
-
         return OrderResponse.builder()
                 .orderId(o.getId())
                 .userId(o.getUser() != null ? o.getUser().getId() : null)
@@ -95,3 +102,5 @@ public class OrderController {
                 .build();
     }
 }
+
+

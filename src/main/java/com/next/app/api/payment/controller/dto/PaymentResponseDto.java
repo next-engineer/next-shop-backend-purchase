@@ -21,10 +21,22 @@ public class PaymentResponseDto {
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
     public String getCardNumber() { return cardNumber; }
-    public void setCardNumber(String cardNumber) { this.cardNumber = cardNumber; }
+    public void setCardNumber(String cardNumber) {
+        if (cardNumber != null && cardNumber.length() > 4) {
+            this.cardNumber = "****-****-****-" + cardNumber.substring(cardNumber.length() - 4);
+        } else {
+            this.cardNumber = cardNumber;
+        }
+    }
 
     public String getBankAccount() { return bankAccount; }
-    public void setBankAccount(String bankAccount) { this.bankAccount = bankAccount; }
+    public void setBankAccount(String bankAccount) {
+        if (bankAccount != null && bankAccount.length() > 4) {
+            this.bankAccount = "****" + bankAccount.substring(bankAccount.length() - 4);
+        } else {
+            this.bankAccount = bankAccount;
+        }
+    }
 
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
