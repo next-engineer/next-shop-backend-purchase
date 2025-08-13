@@ -7,10 +7,8 @@ plugins {
     id 'java'
 }
 
-bootJar {
-    // 빌드 시 생성되는 JAR 파일명
-    archiveFileName = "app.jar"
-}
+bootJar { archiveFileName = 'app.jar' }
+jar { enabled = false }
 
 java {
     // 사용 자바 버전
