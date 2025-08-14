@@ -2,7 +2,8 @@ name: Deploy to ECS
 
 on:
   push:
-  branches: [ "taebin" ]
+    branches:
+      - taebin
 
 concurrency:
   group: ecs-deploy
