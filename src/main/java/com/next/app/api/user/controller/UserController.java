@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,15 +19,12 @@ import java.util.Map;
 @RequestMapping("/api/users")
 @Tag(name = "User Controller", description = "사용자 관리 API")
 @CrossOrigin(origins = "http://localhost")
+@RequiredArgsConstructor
 public class UserController {
 
-    public static record LoginRequest(@Email String email, @NotBlank String password) {}
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    public record LoginRequest(@Email String email, @NotBlank String password) {}
+    private final UserService userService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
     @Operation(summary = "모든 사용자 조회")
@@ -69,15 +66,17 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/login")
-    @Operation(summary = "로그인", description = "JWT 토큰 발급")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
-        try {
-            User user = userService.login(req.email(), req.password());
-            String token = jwtTokenProvider.generateToken(user.getEmail());
-            return ResponseEntity.ok(Map.of("user", user, "token", token));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
-        }
-    }
+
+
+//    @PostMapping("/login")
+//    @Operation(summary = "로그인", description = "JWT 토큰 발급")
+//    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
+//        try {
+//            User user = userService.login(req.email(), req.password());
+//            String token = jwtTokenProvider.generateToken(user.getEmail()); // 현재 Provider 시그니처는 email만
+//            return ResponseEntity.ok(Map.of("accessToken", token, "user", user));
+//        } catch (RuntimeException e) {
+//            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+//        }
+//    }
 }
