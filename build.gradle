@@ -4,16 +4,12 @@ plugins {
     id 'java'
 }
 
-bootJar {
-    archiveFileName = "app.jar"
-}
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-group = 'com.next.app'
+group = 'com.shop.app'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '17'
 
@@ -21,9 +17,6 @@ repositories {
     mavenCentral()
 }
 
-springBoot {
-    mainClass = 'com.next.app.NextJavaServerBaseApplication'
-}
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
