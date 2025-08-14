@@ -14,7 +14,7 @@ spring:
     # 로컬 개발 환경 DB 주소 (JDBC URL)
     # 배포 시 운영 DB 주소로 교체하거나, 환경변수로 분리해서 사용 권장
     # 꼭 본인의 DB명, 계정, 비밀번호로 수정해야 함
-    url: jdbc:mysql://next-db.c74828wmikhx.ap-northeast-2.rds.amazonaws.com:3306/test?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+    url: jdbc:mysql://shop-db.c74828wmikhx.ap-northeast-2.rds.amazonaws.com:3306/shop?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
 
     # MySQL 드라이버 (변경하지 않아도 됨)
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -22,7 +22,7 @@ spring:
     # DB 접속 계정
     username: admin
     # DB 접속 비밀번호
-    password: :<~2?A3d?*r]Z$[w-mUh2O~(YkWR
+    password: PgEhzLRi4Pf0cVFG5BhX
 
   jpa:
     hibernate:
