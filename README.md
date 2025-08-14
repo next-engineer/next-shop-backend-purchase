@@ -1,1 +1,2 @@
 # next-java-server-base
+.
