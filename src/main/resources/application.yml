@@ -1,27 +1,57 @@
 springdoc:
   swagger-ui:
+    # Swagger UI 접속 경로 설정
+    # 프로젝트 실행 후 브라우저에서 http://localhost:8080/swagger-ui.html 로 접근 가능
     path: /swagger-ui.html
 
-
 server:
+  # 서버 포트 설정 (기본 8080, 필요 시 변경)
   port: 8080
 
 spring:
   datasource:
+    # ===== [DB 접속 설정] =====
+    # 로컬 개발 환경 DB 주소 (JDBC URL)
+    # 배포 시 운영 DB 주소로 교체하거나, 환경변수로 분리해서 사용 권장
+    # 꼭 본인의 DB명, 계정, 비밀번호로 수정해야 함
     url: jdbc:mysql://next-db.c74828wmikhx.ap-northeast-2.rds.amazonaws.com:3306/test?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+
+    # MySQL 드라이버 (변경하지 않아도 됨)
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # DB 접속 계정
     username: admin
+    # DB 접속 비밀번호
     password: :<~2?A3d?*r]Z$[w-mUh2O~(YkWR
+
   jpa:
     hibernate:
+      # 개발/테스트 환경: update (변경사항 자동 반영)
+      # 운영 환경: validate (DDL 변경 방지)
       ddl-auto: update
-    show-sql: true
+    show-sql: true   # 실행되는 SQL 콘솔에 출력
     properties:
       hibernate:
-        format_sql: true
+        format_sql: true  # SQL 예쁘게 포맷팅
         dialect: org.hibernate.dialect.MySQL8Dialect
-        default_schema: test
+        # default_schema: auth_schema  # DB 스키마 명시 (필요 시 활성화)
 
 app:
   cors:
+    # 프론트엔드 허용 도메인 설정
+    # 환경변수 FRONTEND_ORIGIN 값이 없으면 기본 http://localhost:3000 사용
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+
+jwt:
+  # JWT 서명 시크릿 키 (반드시 32자 이상!)
+  # 운영 시 환경변수로 주입 권장, 변경 시 기존 토큰 전부 무효화됨
+  secret: "ThisIsASecureJWTSecretKeyString_Min32Chars!"
+
+  # 토큰 유효 시간 (밀리초 단위) → 3600000ms = 1시간
+  expiration-ms: 3600000
+
+logging:
+  level:
+    # Spring Security 디버그 로그 출력 (JWT 인증 흐름 확인용)
+    # 운영 환경에서는 반드시 제거!
+    org.springframework.security: DEBUG

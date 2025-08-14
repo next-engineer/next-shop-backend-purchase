@@ -8,6 +8,7 @@ import com.next.app.api.payment.controller.dto.PaymentResponseDto;
 import com.next.app.api.payment.entity.Payment;
 import com.next.app.api.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,24 +25,35 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponseDto pay(PaymentRequestDto req) {
-        if (req == null || req.getOrderId() == null) throw new IllegalArgumentException("orderId is required");
-        if (req.getPaymentMethod() == null) throw new IllegalArgumentException("paymentMethod is required");
+        if (req == null || req.getOrderId() == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+        if (req.getPaymentMethod() == null) {
+            throw new IllegalArgumentException("paymentMethod is required");
+        }
 
+        // 주문 소유권 검증은 Controller 단계에서 호출하거나 여기도 포함 가능
         Order order = orderService.getOrderOrThrow(req.getOrderId());
-        if (order.getStatus() == OrderStatus.PAID) throw new IllegalStateException("Order is already PAID");
+        if (order.getStatus() == OrderStatus.PAID) {
+            throw new IllegalStateException("Order is already PAID");
+        }
 
         Payment payment = new Payment();
         payment.setOrder(order);
         payment.setPaymentMethod(req.getPaymentMethod().toUpperCase());
+
         switch (payment.getPaymentMethod()) {
             case "CARD" -> payment.setCardNumber(maskCard(req.getPaymentInfo()));
             case "BANK" -> payment.setBankAccount(maskAccount(req.getPaymentInfo()));
             default -> throw new IllegalArgumentException("Unsupported payment method: " + req.getPaymentMethod());
         }
+
         payment.setPaidAt(LocalDateTime.now());
         Payment saved = paymentRepository.save(payment);
 
+        // 주문 상태 갱신
         orderService.updateOrderStatus(order.getId(), OrderStatus.PAID);
+
         return toDto(saved);
     }
 
@@ -50,13 +62,17 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentId));
 
-        if (payment.getCancelledAt() != null) return toDto(payment);
+        if (payment.getCancelledAt() != null) {
+            return toDto(payment);
+        }
 
         payment.setCancelledAt(LocalDateTime.now());
         Payment saved = paymentRepository.save(payment);
 
         Order order = payment.getOrder();
-        if (order != null) orderService.updateOrderStatus(order.getId(), OrderStatus.CANCELLED);
+        if (order != null) {
+            orderService.updateOrderStatus(order.getId(), OrderStatus.CANCELLED);
+        }
 
         return toDto(saved);
     }
@@ -68,8 +84,31 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentResponseDto> listByOrderId(Long orderId) {
-        return paymentRepository.findByOrder_Id(orderId).stream().map(this::toDto).toList();
+        return paymentRepository.findByOrder_Id(orderId)
+                .stream()
+                .map(this::toDto)
+                .toList();
     }
+
+    // ==== 🔹 추가된 검증 메서드 ====
+
+    /** 주문이 현재 로그인한 사용자의 것인지 검증 */
+    public void verifyOrderOwnership(Long orderId, Long userId) {
+        if (!orderService.isOrderOwner(orderId, userId)) {
+            throw new AccessDeniedException("해당 주문에 접근할 수 없습니다.");
+        }
+    }
+
+    /** 결제가 현재 로그인한 사용자의 주문에 속하는지 검증 */
+    public void verifyPaymentOwnership(Long paymentId, Long userId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new IllegalArgumentException("결제를 찾을 수 없습니다."));
+        if (!orderService.isOrderOwner(payment.getOrder().getId(), userId)) {
+            throw new AccessDeniedException("해당 결제에 접근할 수 없습니다.");
+        }
+    }
+
+    // ==== 🔹 내부 유틸 ====
 
     private String maskCard(String raw) {
         if (raw == null || raw.isBlank()) return null;

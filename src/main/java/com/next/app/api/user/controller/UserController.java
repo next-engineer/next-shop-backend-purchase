@@ -2,9 +2,12 @@ package com.next.app.api.user.controller;
 
 import com.next.app.api.user.entity.User;
 import com.next.app.api.user.service.UserService;
+import com.next.app.security.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,33 +21,24 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost")
 public class UserController {
 
-
-
-    public static record LoginRequest(
-            @jakarta.validation.constraints.Email
-            String email,
-            @jakarta.validation.constraints.NotBlank
-            String password
-    ) {}
+    public static record LoginRequest(@Email String email, @NotBlank String password) {}
 
     @Autowired
     private UserService userService;
 
-
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
-    @Operation(summary = "모든 사용자 조회", description = "등록된 모든 사용자 목록을 반환합니다.")
-    public List<User> getAllUsers(@Parameter(description = "삭제 포함 여부", example = "true")
-                                  @RequestParam(defaultValue = "false") boolean includeDeleted) {
-        return includeDeleted ? userService.listUsersAny()
-                : userService.getAllUsers();
+    @Operation(summary = "모든 사용자 조회")
+    public List<User> getAllUsers(@RequestParam(defaultValue = "false") boolean includeDeleted) {
+        return includeDeleted ? userService.listUsersAny() : userService.getAllUsers();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "사용자 조회", description = "ID로 특정 사용자를 조회합니다.")
-    public ResponseEntity<User> getUserById(@PathVariable Long id, @Parameter(description = "삭제 포함 여부", example = "true")
-    @RequestParam(defaultValue = "false") boolean includeDeleted) {
-
+    @Operation(summary = "사용자 조회")
+    public ResponseEntity<User> getUserById(@PathVariable Long id,
+                                            @RequestParam(defaultValue = "false") boolean includeDeleted) {
         return (includeDeleted ? userService.getUserByIdAny(id)
                 : userService.getUserById(id))
                 .map(ResponseEntity::ok)
@@ -52,13 +46,13 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "회원가입", description = "새로운 사용자를 생성합니다.")
+    @Operation(summary = "회원가입")
     public User createUser(@RequestBody User user) {
         return userService.createUser(user);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "사용자 수정", description = "기존 사용자 정보를 수정합니다.")
+    @Operation(summary = "사용자 수정")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
         try {
             User updatedUser = userService.updateUser(id, userDetails);
@@ -69,18 +63,19 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "사용자 삭제", description = "사용자를 삭제합니다.")
+    @Operation(summary = "사용자 삭제")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/login")
-    @Operation(summary = "로그인", description = "이메일과 비밀번호로 사용자 로그인")
-    public ResponseEntity<?> login(@jakarta.validation.Valid @RequestBody LoginRequest req) {
+    @Operation(summary = "로그인", description = "JWT 토큰 발급")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
         try {
             User user = userService.login(req.email(), req.password());
-            return ResponseEntity.ok(user);
+            String token = jwtTokenProvider.generateToken(user.getEmail());
+            return ResponseEntity.ok(Map.of("user", user, "token", token));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
