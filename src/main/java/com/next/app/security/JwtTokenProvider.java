@@ -15,12 +15,12 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     @Value("${jwt.secret}")
-    private String secretKeyRaw; // application.yml에서 주입
+    private String secretKeyRaw;
 
     @Value("${jwt.expiration-ms}")
     private long validityInMs;
 
-    private SecretKey secretKey; // 실제 사용할 시크릿 키 객체
+    private SecretKey secretKey;
 
     @PostConstruct
     public void init() {
@@ -30,7 +30,7 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(secretKeyRaw.getBytes(StandardCharsets.UTF_8));
     }
 
-    // 1. 토큰 생성
+    // 토큰 생성
     public String generateToken(String email) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityInMs);
@@ -43,7 +43,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // 2. 요청 헤더에서 토큰 추출 (Bearer 제거)
+    // 요청 헤더에서 토큰 추출
     public String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.toLowerCase().startsWith("bearer ")) {
@@ -52,7 +52,7 @@ public class JwtTokenProvider {
         return null;
     }
 
-    // 3. 토큰 유효성 & 만료 확인
+    // 토큰 유효성 & 만료 확인
     public boolean validateToken(String token) {
         try {
             Jws<Claims> claims = Jwts.parserBuilder()
@@ -62,12 +62,11 @@ public class JwtTokenProvider {
 
             return !claims.getBody().getExpiration().before(new Date());
         } catch (JwtException | IllegalArgumentException e) {
-            // 잘못되었거나 만료된 토큰
             return false;
         }
     }
 
-    // 4. 토큰에서 이메일(주체) 추출
+    // 토큰에서 이메일 추출
     public String getEmailFromToken(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)
@@ -77,4 +76,3 @@ public class JwtTokenProvider {
                 .getSubject();
     }
 }
-

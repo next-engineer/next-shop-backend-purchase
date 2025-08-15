@@ -37,54 +37,28 @@ public class UserService {
         return userRepository.findRawById(id);
     }
 
+    @Transactional(readOnly = true)
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
+    @Transactional
     public User createUser(User user) {
-        if (userRepository.existsByEmailAndDeletedFalse(user.getEmail())) {
-            throw new RuntimeException("이미 가입된 이메일입니다: " + user.getEmail());
-        }
+        userRepository.findByEmail(user.getEmail()).ifPresent(u -> {
+            throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
+        });
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setDeleted(false);
         return userRepository.save(user);
     }
 
-    public User updateUser(Long id, User userDetails) {
-        User user = userRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new RuntimeException("수정할 사용자가 존재하지 않거나 삭제된 계정입니다: " + id));
-
-        if (userDetails.getName() != null) {
-            user.setName(userDetails.getName());
-        }
-        if (userDetails.getPhone_number() != null) { // snake_case getter
-            user.setPhone_number(userDetails.getPhone_number());
-        }
-        if (userDetails.getDelivery_address() != null) { // snake_case getter
-            user.setDelivery_address(userDetails.getDelivery_address());
-        }
-
-        if (userDetails.getPassword() != null && !userDetails.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
-        }
-
-        return userRepository.save(user);
-    }
-
-    public void deleteUser(Long id) {
-        User user = userRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new RuntimeException("삭제할 사용자가 존재하지 않습니다: " + id));
-        user.setDeleted(true);
-        userRepository.save(user);
-    }
-
-    public User login(String email, String password) {
-        User user = userRepository.findByEmailAndDeletedFalse(email)
-                .orElseThrow(() -> new RuntimeException("이메일이 존재하지 않습니다: " + email));
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+    @Transactional(readOnly = true)
+    public User authenticate(String email, String rawPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
         return user;
     }
+
 }

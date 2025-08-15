@@ -1,10 +1,13 @@
 package com.next.app.api.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
@@ -16,6 +19,8 @@ import org.hibernate.annotations.Where;
 @SQLDelete(sql = "UPDATE users SET deleted = true WHERE id = ?")
 @Where(clause = "deleted = false")
 public class User {
+
+    private static final ObjectMapper OM = new ObjectMapper();
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,11 +35,11 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    private String delivery_address;  // snake_case
+    @Column(nullable = false, name = "delivery_address", columnDefinition = "TEXT")
+    private String delivery_address;
 
-    @Column(length = 20)
-    private String phone_number;      // snake_case
+    @Column(length = 20, name = "phone_number")
+    private String phone_number;
 
     @Column(nullable = false)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
