@@ -12,12 +12,6 @@ import java.util.List;
 @Data
 public class OrderRequest {
 
-    @NotNull
-    private BigDecimal totalPrice;
-
-    @NotBlank
-    private String status;
-
     @NotBlank
     private String deliveryAddress;
 
@@ -28,8 +22,10 @@ public class OrderRequest {
     public static class Item {
         @NotNull
         private Long productId;
+
         @Min(1)
         private int quantity;
+
         @NotNull
         private BigDecimal price;
     }

@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Payment API", description = "결제 API")
+/**
+ * 결제 API 컨트롤러
+ */
+@Tag(name = "Payment API", description = "결제 관련 API")
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    @Operation(summary = "결제 생성/승인")
+    @Operation(summary = "결제 생성 및 승인")
     public ResponseEntity<PaymentResponseDto> pay(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                   @RequestBody PaymentRequestDto req) {
         paymentService.verifyOrderOwnership(req.getOrderId(), principal.getId());
@@ -30,7 +33,7 @@ public class PaymentController {
     }
 
     @PostMapping("/{paymentId}/cancel")
-    @Operation(summary = "결제 취소/환불")
+    @Operation(summary = "결제 취소 및 환불")
     public ResponseEntity<PaymentResponseDto> cancel(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @PathVariable Long paymentId) {
         paymentService.verifyPaymentOwnership(paymentId, principal.getId());

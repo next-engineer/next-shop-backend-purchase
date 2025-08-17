@@ -2,14 +2,26 @@ package com.next.app.api.payment.controller.dto;
 
 import java.time.LocalDateTime;
 
+/**
+ * 결제 응답 DTO
+ */
 public class PaymentResponseDto {
+
     private Long id;
+
     private Long orderId;
+
     private String paymentMethod;
-    private String cardNumber;
-    private String bankAccount;
+
+    private String cardNumber; // 마스킹 처리 예: ****-****-****-1234
+
+    private String bankAccount; // 마스킹 처리 예: ****1234
+
     private LocalDateTime paidAt;
+
     private LocalDateTime cancelledAt;
+
+    // getters and setters
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

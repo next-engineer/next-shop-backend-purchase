@@ -1,10 +1,17 @@
 package com.next.app.api.payment.controller.dto;
 
+/**
+ * 결제 요청 DTO
+ */
 public class PaymentRequestDto {
-    private Long orderId;
-    private String paymentMethod; // CARD or BANK
-    private String paymentInfo;   // 카드번호 또는 계좌번호(원문)
 
+    private Long orderId;
+
+    private String paymentMethod; // "CARD", "BANK" 등
+
+    private String paymentInfo; // 원본 카드번호 또는 계좌번호
+
+    // getters and setters
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
 

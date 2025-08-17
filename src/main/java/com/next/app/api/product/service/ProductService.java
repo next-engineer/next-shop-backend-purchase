@@ -1,13 +1,8 @@
 package com.next.app.api.product.service;
-// Product 클래스는 오류 없애기위한 파일이니 추후 삭제 예정
 
 import com.next.app.api.product.entity.Product;
 import com.next.app.api.product.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import com.next.app.api.product.controller.dto.ProductDto;
-import com.next.app.api.product.entity.Product;
-import com.next.app.api.product.repository.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,11 +10,17 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 상품 관련 비즈니스 로직 담당 서비스
+ */
 @Service
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+
+    public ProductService(ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
 
     // 전체 상품 조회
     public List<Product> getAllProducts() {
@@ -40,11 +41,11 @@ public class ProductService {
     public Product updateProduct(Long id, Product productDetails) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다: " + id));
-
         product.setName(productDetails.getName());
         product.setDescription(productDetails.getDescription());
         product.setPrice(productDetails.getPrice());
-
+        product.setImageUrl(productDetails.getImageUrl());
+        product.setCategory(productDetails.getCategory());
         return productRepository.save(product);
     }
 
@@ -53,8 +54,7 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    public ProductService(ProductRepository productRepository) { this.productRepository = productRepository; }
-
+    // 조건별 페이징 상품 리스트(DTO 반환)
     public Page<ProductDto> list(String q, Long categoryId, Pageable pageable) {
         boolean hasQ = q != null && !q.isBlank();
         boolean hasCat = categoryId != null;
@@ -70,9 +70,14 @@ public class ProductService {
                 p.getCategory() != null ? p.getCategory().getId() : null
         ));
     }
+
+    // 단건 상품 DTO 반환
     public ProductDto get(Long id) {
-        var p = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found: " + id));
-        return new ProductDto(p.getId(), p.getName(), p.getPrice(), p.getImageUrl(),
-                p.getCategory() != null ? p.getCategory().getId() : null);
+        var p = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found: " + id));
+        return new ProductDto(
+                p.getId(), p.getName(), p.getPrice(), p.getImageUrl(),
+                p.getCategory() != null ? p.getCategory().getId() : null
+        );
     }
 }

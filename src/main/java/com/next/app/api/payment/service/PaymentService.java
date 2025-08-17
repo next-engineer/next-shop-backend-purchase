@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 결제 관련 서비스
+ */
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -23,6 +26,9 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderService orderService;
 
+    /**
+     * 결제 승인 및 저장 처리
+     */
     @Transactional
     public PaymentResponseDto pay(PaymentRequestDto req) {
         if (req == null || req.getOrderId() == null) {
@@ -55,6 +61,9 @@ public class PaymentService {
         return toDto(saved);
     }
 
+    /**
+     * 결제 취소 처리
+     */
     @Transactional
     public PaymentResponseDto cancel(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
@@ -75,11 +84,17 @@ public class PaymentService {
         return toDto(saved);
     }
 
+    /**
+     * 결제 단건 조회
+     */
     @Transactional(readOnly = true)
     public Optional<PaymentResponseDto> getPayment(Long id) {
         return paymentRepository.findById(id).map(this::toDto);
     }
 
+    /**
+     * 주문별 결제 이력 조회
+     */
     @Transactional(readOnly = true)
     public List<PaymentResponseDto> listByOrderId(Long orderId) {
         return paymentRepository.findByOrder_Id(orderId)
@@ -88,12 +103,18 @@ public class PaymentService {
                 .toList();
     }
 
+    /**
+     * 주문 소유자 검증
+     */
     public void verifyOrderOwnership(Long orderId, Long userId) {
         if (!orderService.isOrderOwner(orderId, userId)) {
             throw new AccessDeniedException("해당 주문에 접근할 수 없습니다.");
         }
     }
 
+    /**
+     * 결제 소유자 검증
+     */
     public void verifyPaymentOwnership(Long paymentId, Long userId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("결제를 찾을 수 없습니다."));
@@ -102,6 +123,7 @@ public class PaymentService {
         }
     }
 
+    // 카드번호 마스킹
     private String maskCard(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String digits = raw.replaceAll("\\D", "");
@@ -110,6 +132,7 @@ public class PaymentService {
         return "****-****-****-" + last4;
     }
 
+    // 계좌번호 마스킹
     private String maskAccount(String raw) {
         if (raw == null || raw.isBlank()) return null;
         String digits = raw.replaceAll("\\D", "");
@@ -118,6 +141,7 @@ public class PaymentService {
         return "****" + last4;
     }
 
+    // 엔티티 -> DTO 변환
     private PaymentResponseDto toDto(Payment p) {
         PaymentResponseDto dto = new PaymentResponseDto();
         dto.setId(p.getId());

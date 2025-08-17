@@ -1,3 +1,7 @@
 package com.next.app.api.category.controller.dto;
 
-public record CategoryDto(Long id, String name) {}
+/**
+ * 간단한 카테고리 정보 전송 객체
+ */
+public record CategoryDto(Long id, String name) {
+}

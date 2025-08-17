@@ -18,6 +18,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 장바구니 서비스
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,12 +30,18 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
 
+    /**
+     * 장바구니 조회
+     */
     public CartResponse getCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));
         return toCartResponse(cart);
     }
 
+    /**
+     * 장바구니에 상품 추가
+     */
     public CartResponse addItem(Long userId, CartRequest request) {
         if (request.getQuantity() <= 0) {
             throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
@@ -73,6 +82,9 @@ public class CartService {
         return toCartResponse(cart);
     }
 
+    /**
+     * 장바구니 상품 수량 변경
+     */
     public CartResponse updateItemQuantity(Long userId, Long productId, int quantity) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));
@@ -94,6 +106,9 @@ public class CartService {
         return toCartResponse(cart);
     }
 
+    /**
+     * 장바구니 전체 비우기
+     */
     public void clearCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));

@@ -3,4 +3,8 @@ package com.next.app.api.category.repository;
 import com.next.app.api.category.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CategoryRepository extends JpaRepository<Category, Long> { }
+/**
+ * 카테고리 저장소
+ */
+public interface CategoryRepository extends JpaRepository<Category, Long> {
+}
