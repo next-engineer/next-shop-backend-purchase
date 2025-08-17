@@ -1,5 +1,5 @@
 {
-  "family": "shop-test-task",
+  "family": "purchase-api-task",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
@@ -8,16 +8,16 @@
   "taskRoleArn": "arn:aws:iam::077672914621:role/ecsAppTaskRole",
   "containerDefinitions": [
     {
-      "name": "shop-test-app",
+      "name": "purchase-api",
       "image": "REPLACED_BY_ACTIONS",
       "essential": true,
       "portMappings": [
-        { "containerPort": 8080, "protocol": "tcp" }
+        { "containerPort": 8082, "protocol": "tcp" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/shop-test-task",
+          "awslogs-group": "/ecs/purchase-api",
           "awslogs-region": "ap-northeast-2",
           "awslogs-stream-prefix": "ecs"
         }
