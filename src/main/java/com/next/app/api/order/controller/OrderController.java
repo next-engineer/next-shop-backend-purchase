@@ -10,7 +10,6 @@ import com.next.app.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +31,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id,
                                                   @AuthenticationPrincipal CustomUserPrincipal principal) {
         if (!orderService.isOrderOwner(id, principal.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(403).build();
         }
         Order order = orderService.getOrderOrThrow(id);
         return ResponseEntity.ok(toResponse(order));
@@ -50,10 +49,10 @@ public class OrderController {
     @Operation(summary = "주문 생성")
     public ResponseEntity<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @RequestBody OrderRequest request) {
-        String deliveryAddress = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
-                ? request.getDelivery_address()
-                : "사용자 기본 배송 주소";  // 기존 기본값 유지
-
+        String deliveryAddress = request.getDelivery_address();
+        if (deliveryAddress == null || deliveryAddress.isBlank()) {
+            deliveryAddress = fetchUserDefaultDeliveryAddress(principal.getId());
+        }
         Order order = orderService.createOrder(request, principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
     }
@@ -62,10 +61,10 @@ public class OrderController {
     @Operation(summary = "장바구니 주문 생성")
     public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                   @RequestBody(required = false) OrderRequest request) {
-        String deliveryAddress = (request != null && request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
-                ? request.getDelivery_address()
-                : "사용자 기본 배송 주소"; // 기본 배송 주소
-
+        String deliveryAddress = (request != null) ? request.getDelivery_address() : null;
+        if (deliveryAddress == null || deliveryAddress.isBlank()) {
+            deliveryAddress = fetchUserDefaultDeliveryAddress(principal.getId());
+        }
         Order order = orderService.createOrderFromCart(principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
     }
@@ -103,5 +102,11 @@ public class OrderController {
                                 ))
                                 .collect(Collectors.toList()))
                 .build();
+    }
+
+    // 임시 사용자 기본 배송지 조회 메서드 (실제로 users 서비스 API 연동 필요)
+    private String fetchUserDefaultDeliveryAddress(Long userId) {
+        // TODO: users 서비스 연동 코드 작성
+        return "기본 배송지 없음"; // 임시값, 수정 필요
     }
 }

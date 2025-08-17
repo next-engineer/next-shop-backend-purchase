@@ -18,7 +18,6 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 변경: user 필드 대신 userId 필드로 회원 구분
     @Column(name = "user_id", nullable = false)
     private Long userId;
 

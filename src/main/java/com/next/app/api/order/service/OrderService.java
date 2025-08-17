@@ -39,7 +39,7 @@ public class OrderService {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
-    public Order createOrderFromCart(Long userId, String defaultDeliveryAddress) {
+    public Order createOrderFromCart(Long userId, String deliveryAddress) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));
 
@@ -49,8 +49,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setUserId(userId);
-        // 수정: deliveryAddress → delivery_address
-        order.setDelivery_address(defaultDeliveryAddress);
+        order.setDelivery_address(deliveryAddress);
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
 
@@ -81,7 +80,7 @@ public class OrderService {
         return savedOrder;
     }
 
-    public Order createOrder(OrderRequest request, Long userId, String defaultDeliveryAddress) {
+    public Order createOrder(OrderRequest request, Long userId, String deliveryAddress) {
         if (request == null)
             throw new IllegalArgumentException("주문 요청이 누락되었습니다.");
         if (request.getItems() == null || request.getItems().isEmpty())
@@ -91,11 +90,7 @@ public class OrderService {
         order.setUserId(userId);
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
-
-        // 수정: deliveryAddress → delivery_address
-        String delivery = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
-                ? request.getDelivery_address() : defaultDeliveryAddress;
-        order.setDelivery_address(delivery);
+        order.setDelivery_address(deliveryAddress);
 
         BigDecimal total = BigDecimal.ZERO;
         for (OrderRequest.Item item : request.getItems()) {
@@ -110,7 +105,7 @@ public class OrderService {
             orderItem.setProduct(product);
             orderItem.setQuantity(item.getQuantity());
 
-            BigDecimal price = (item.getPrice() != null) ? item.getPrice() : product.getPrice();
+            BigDecimal price = item.getPrice() != null ? item.getPrice() : product.getPrice();
             orderItem.setPrice(price != null ? price : BigDecimal.ZERO);
 
             total = total.add(orderItem.getPrice().multiply(BigDecimal.valueOf(orderItem.getQuantity())));
@@ -139,4 +134,3 @@ public class OrderService {
                 .orElse(false);
     }
 }
-
