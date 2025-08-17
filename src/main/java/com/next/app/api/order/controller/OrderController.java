@@ -50,16 +50,23 @@ public class OrderController {
     @Operation(summary = "주문 생성")
     public ResponseEntity<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @RequestBody OrderRequest request) {
-        String defaultDeliveryAddress = "사용자 기본 배송 주소"; // 실제 users-service API 호출하여 받아야 함
-        Order order = orderService.createOrder(request, principal.getId(), defaultDeliveryAddress);
+        String deliveryAddress = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
+                ? request.getDelivery_address()
+                : "사용자 기본 배송 주소";  // 기존 기본값 유지
+
+        Order order = orderService.createOrder(request, principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
     }
 
     @PostMapping("/checkout")
     @Operation(summary = "장바구니 주문 생성")
-    public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal CustomUserPrincipal principal) {
-        String defaultDeliveryAddress = "사용자 기본 배송 주소"; // 실제 users-service API 호출하여 받아야 함
-        Order order = orderService.createOrderFromCart(principal.getId(), defaultDeliveryAddress);
+    public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal CustomUserPrincipal principal,
+                                                  @RequestBody(required = false) OrderRequest request) {
+        String deliveryAddress = (request != null && request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
+                ? request.getDelivery_address()
+                : "사용자 기본 배송 주소"; // 기본 배송 주소
+
+        Order order = orderService.createOrderFromCart(principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
     }
 
@@ -81,7 +88,7 @@ public class OrderController {
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .userId(order.getUserId())
-                .deliveryAddress(order.getDeliveryAddress())
+                .delivery_address(order.getDelivery_address())
                 .status(order.getStatus().name())
                 .totalPrice(order.getTotalPrice())
                 .createdAt(order.getCreatedAt())

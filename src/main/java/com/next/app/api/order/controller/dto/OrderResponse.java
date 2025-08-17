@@ -20,7 +20,7 @@ public class OrderResponse {
     private Long userId;
 
     @Schema(description = "배송주소")
-    private String deliveryAddress;
+    private String delivery_address;
 
     @Schema(description = "주문 상태")
     private String status;

@@ -49,7 +49,8 @@ public class OrderService {
 
         Order order = new Order();
         order.setUserId(userId);
-        order.setDeliveryAddress(defaultDeliveryAddress);
+        // 수정: deliveryAddress → delivery_address
+        order.setDelivery_address(defaultDeliveryAddress);
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
 
@@ -91,9 +92,10 @@ public class OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
 
-        String delivery = (request.getDeliveryAddress() != null && !request.getDeliveryAddress().isBlank())
-                ? request.getDeliveryAddress() : defaultDeliveryAddress;
-        order.setDeliveryAddress(delivery);
+        // 수정: deliveryAddress → delivery_address
+        String delivery = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
+                ? request.getDelivery_address() : defaultDeliveryAddress;
+        order.setDelivery_address(delivery);
 
         BigDecimal total = BigDecimal.ZERO;
         for (OrderRequest.Item item : request.getItems()) {
@@ -137,3 +139,4 @@ public class OrderService {
                 .orElse(false);
     }
 }
+

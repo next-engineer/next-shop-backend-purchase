@@ -22,8 +22,8 @@ public class Order {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false)
-    private String deliveryAddress;
+    @Column(name = "delivery_address", nullable = false)
+    private String delivery_address;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
