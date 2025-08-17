@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 public class OrderRequest {
 
-    private String delivery_address;  // 고객이 직접 입력하는 배송지
+    private String delivery_address;
 
     @NotEmpty
     private List<Item> items;

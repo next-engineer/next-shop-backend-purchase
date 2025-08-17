@@ -26,62 +26,17 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    @GetMapping("/{id}")
-    @Operation(summary = "주문 단건 조회")
-    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id,
-                                                  @AuthenticationPrincipal CustomUserPrincipal principal) {
-        if (!orderService.isOrderOwner(id, principal.getId())) {
-            return ResponseEntity.status(403).build();
-        }
-        Order order = orderService.getOrderOrThrow(id);
-        return ResponseEntity.ok(toResponse(order));
-    }
-
-    @GetMapping
-    @Operation(summary = "내 주문 목록")
-    public ResponseEntity<List<OrderResponse>> listByUser(@AuthenticationPrincipal CustomUserPrincipal principal) {
-        List<Order> orders = orderService.listByUser(principal.getId());
-        List<OrderResponse> response = orders.stream().map(this::toResponse).collect(Collectors.toList());
-        return ResponseEntity.ok(response);
-    }
-
     @PostMapping
     @Operation(summary = "주문 생성")
     public ResponseEntity<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @RequestBody OrderRequest request) {
-        String deliveryAddress = request.getDelivery_address();
-        if (deliveryAddress == null || deliveryAddress.isBlank()) {
-            deliveryAddress = fetchUserDefaultDeliveryAddress(principal.getId());
-        }
+        // 사용자가 입력한 배송지 그대로 사용 (null일 경우 빈 문자열로 처리 가능)
+        String deliveryAddress = request.getDelivery_address() != null ? request.getDelivery_address() : "";
         Order order = orderService.createOrder(request, principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
     }
 
-    @PostMapping("/checkout")
-    @Operation(summary = "장바구니 주문 생성")
-    public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal CustomUserPrincipal principal,
-                                                  @RequestBody(required = false) OrderRequest request) {
-        String deliveryAddress = (request != null) ? request.getDelivery_address() : null;
-        if (deliveryAddress == null || deliveryAddress.isBlank()) {
-            deliveryAddress = fetchUserDefaultDeliveryAddress(principal.getId());
-        }
-        Order order = orderService.createOrderFromCart(principal.getId(), deliveryAddress);
-        return ResponseEntity.ok(toResponse(order));
-    }
-
-    @PatchMapping("/{id}/status")
-    @Operation(summary = "주문 상태 변경")
-    public ResponseEntity<Void> updateStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
-        orderService.updateOrderStatus(id, status);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "주문 삭제")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        orderService.deleteOrder(id);
-        return ResponseEntity.noContent().build();
-    }
+    // 주문 단건조회, 주문 목록 등 필요한 메서드도 동일하게 추가 가능
 
     private OrderResponse toResponse(Order order) {
         return OrderResponse.builder()
@@ -102,11 +57,5 @@ public class OrderController {
                                 ))
                                 .collect(Collectors.toList()))
                 .build();
-    }
-
-    // 임시 사용자 기본 배송지 조회 메서드 (실제로 users 서비스 API 연동 필요)
-    private String fetchUserDefaultDeliveryAddress(Long userId) {
-        // TODO: users 서비스 연동 코드 작성
-        return "기본 배송지 없음"; // 임시값, 수정 필요
     }
 }
