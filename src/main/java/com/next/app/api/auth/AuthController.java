@@ -1,43 +1,74 @@
 package com.next.app.api.auth;
 
 import com.next.app.api.user.entity.User;
-import com.next.app.api.user.service.UserService;
+import com.next.app.api.user.repository.UserRepository;
 import com.next.app.security.JwtTokenProvider;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserService userService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            User user = userService.authenticate(request.getEmail(), request.getPassword());
+    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            String token = jwtTokenProvider.generateToken(user.getEmail());
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + token);
-            headers.add("Access-Control-Expose-Headers", "Authorization");
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(Map.of(
-                            "accessToken", token,
-                            "user", user
-                    ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401)
-                    .body(Map.of("error", "이메일 또는 비밀번호가 올바르지 않습니다."));
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Invalid credentials");
         }
+
+        List<String> roles = extractRoles(user);
+        String token = jwtTokenProvider.createToken(user.getId(), user.getEmail(), roles);
+
+        return ResponseEntity.ok(new TokenResponse("Bearer", token));
+    }
+
+    private List<String> extractRoles(User user) {
+        try {
+            Method m = user.getClass().getMethod("getRoles");
+            Object raw = m.invoke(user);
+            if (raw instanceof Iterable<?> it) {
+                List<String> out = new ArrayList<>();
+                for (Object o : it) if (o != null) out.add(o.toString());
+                if (!out.isEmpty()) return out;
+            }
+        } catch (Exception ignored) { }
+        try {
+            Method m = user.getClass().getMethod("getRole");
+            Object raw = m.invoke(user);
+            if (raw != null) return List.of(raw.toString());
+        } catch (Exception ignored) { }
+        try {
+            Method m = user.getClass().getMethod("getAuthorities");
+            Object raw = m.invoke(user);
+            if (raw instanceof Iterable<?> it) {
+                List<String> out = new ArrayList<>();
+                for (Object o : it) if (o != null) out.add(o.toString());
+                if (!out.isEmpty()) return out;
+            }
+        } catch (Exception ignored) { }
+        return List.of("ROLE_USER");
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class TokenResponse {
+        private String tokenType;
+        private String accessToken;
     }
 }

@@ -1,6 +1,8 @@
 package com.next.app.security;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,63 +12,77 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtTokenProvider {
 
     @Value("${jwt.secret}")
-    private String secretKeyRaw;
+    private String secret;
 
-    @Value("${jwt.expiration-ms}")
+    @Value("${jwt.expiration-ms:3600000}")
     private long validityInMs;
 
     private SecretKey secretKey;
 
     @PostConstruct
     public void init() {
-        if (secretKeyRaw == null || secretKeyRaw.length() < 32) {
-            throw new IllegalStateException("JWT Secret must be at least 32 characters long");
-        }
-        this.secretKey = Keys.hmacShaKeyFor(secretKeyRaw.getBytes(StandardCharsets.UTF_8));
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    // 토큰 생성
-    public String generateToken(String email) {
+    public String createToken(Long userId, String email, List<String> roles) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityInMs);
 
         return Jwts.builder()
                 .setSubject(email)
+                .claim("userId", userId)
+                .claim("roles", roles)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // 요청 헤더에서 토큰 추출
     public String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (bearerToken != null && bearerToken.toLowerCase().startsWith("bearer ")) {
-            return bearerToken.substring(7);
+        String header = request.getHeader("Authorization");
+        if (header == null || header.isBlank()) return null;
+
+        String h = header.trim();
+        // Swagger가 'bearer', 'Bearer', 공백 2개, 따옴표 포함해 보내는 경우 방어
+        if (h.regionMatches(true, 0, "Bearer", 0, "Bearer".length())) {
+            String token = h.substring("Bearer".length()).trim();
+            if ((token.startsWith("\"") && token.endsWith("\"")) || (token.startsWith("'") && token.endsWith("'"))) {
+                token = token.substring(1, token.length() - 1);
+            }
+            return token.isBlank() ? null : token;
         }
         return null;
     }
 
-    // 토큰 유효성 & 만료 확인
     public boolean validateToken(String token) {
         try {
-            Jws<Claims> claims = Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
-                    .build()
-                    .parseClaimsJws(token);
-
-            return !claims.getBody().getExpiration().before(new Date());
-        } catch (JwtException | IllegalArgumentException e) {
+            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            return true;
+        } catch (ExpiredJwtException e) {
+            return false;
+        } catch (Exception e) {
             return false;
         }
     }
 
-    // 토큰에서 이메일 추출
+    public Long getUserId(String token) {
+        Object val = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("userId");
+        if (val instanceof Number n) return n.longValue();
+        if (val instanceof String s) return Long.parseLong(s);
+        return null;
+    }
+
     public String getEmailFromToken(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)
@@ -74,5 +90,18 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public List<String> getRoles(String token) {
+        Object val = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("roles");
+        if (val instanceof List<?> list) {
+            return list.stream().map(Object::toString).toList();
+        }
+        return List.of();
     }
 }

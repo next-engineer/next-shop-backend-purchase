@@ -3,6 +3,7 @@ package com.next.app.api.order.service;
 import com.next.app.api.cart.entity.Cart;
 import com.next.app.api.cart.entity.CartItem;
 import com.next.app.api.cart.repository.CartRepository;
+import com.next.app.api.order.controller.dto.OrderRequest;
 import com.next.app.api.order.entity.Order;
 import com.next.app.api.order.entity.OrderItem;
 import com.next.app.api.order.entity.OrderStatus;
@@ -93,13 +94,57 @@ public class OrderService {
         return savedOrder;
     }
 
-    public Order createOrder(Object orderRequest, User user) {
+    // === 여기만 변경 ===
+    public Order createOrder(OrderRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+
         Order order = new Order();
         order.setUser(user);
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
+
+        // 배송지: 요청값 우선, 없으면 사용자 기본 배송지
+        if (request != null && request.getDeliveryAddress() != null && !request.getDeliveryAddress().isBlank()) {
+            order.setDeliveryAddress(request.getDeliveryAddress());
+        } else {
+            order.setDeliveryAddress(user.getDelivery_address());
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        // 요청에 아이템이 있을 경우 반영
+        if (request != null && request.getItems() != null && !request.getItems().isEmpty()) {
+            for (var it : request.getItems()) {
+                Long productId = it.getProductId();
+                Integer quantity = it.getQuantity();
+                BigDecimal price = it.getPrice(); // null이면 상품 가격으로 대체
+
+                if (productId == null || quantity == null || quantity <= 0) {
+                    throw new IllegalArgumentException("유효하지 않은 주문 아이템입니다.");
+                }
+
+                Product product = productRepository.findById(productId)
+                        .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다."));
+
+                OrderItem oi = new OrderItem();
+                oi.setOrder(order);
+                oi.setProduct(product);
+                oi.setQuantity(quantity);
+
+                BigDecimal unitPrice = price != null ? price : product.getPrice();
+                if (unitPrice == null) unitPrice = BigDecimal.ZERO;
+                oi.setPrice(unitPrice);
+
+                total = total.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
+                order.getOrderItems().add(oi);
+            }
+        }
+
+        order.setTotalPrice(total);
         return orderRepository.save(order);
     }
+    // ===================
 
     public void updateOrderStatus(Long id, OrderStatus status) {
         Order order = orderRepository.findById(id)

@@ -7,7 +7,7 @@ import com.next.app.api.order.entity.Order;
 import com.next.app.api.order.entity.OrderItem;
 import com.next.app.api.order.entity.OrderStatus;
 import com.next.app.api.order.service.OrderService;
-import com.next.app.api.user.entity.User;
+import com.next.app.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +31,8 @@ public class OrderController {
     @GetMapping("/{id}")
     @Operation(summary = "주문 단건 조회")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id,
-                                                      @AuthenticationPrincipal User user) {
-        if (!orderService.isOrderOwner(id, user.getId())) {
+                                                      @AuthenticationPrincipal CustomUserPrincipal principal) {
+        if (!orderService.isOrderOwner(id, principal.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return orderService.getOrder(id)
@@ -42,23 +42,23 @@ public class OrderController {
 
     @GetMapping
     @Operation(summary = "내 주문 이력 조회")
-    public ResponseEntity<List<OrderResponse>> listByUser(@AuthenticationPrincipal User user) {
-        List<Order> orders = orderService.listByUser(user.getId());
+    public ResponseEntity<List<OrderResponse>> listByUser(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        List<Order> orders = orderService.listByUser(principal.getId());
         return ResponseEntity.ok(orders.stream().map(this::toResponse).toList());
     }
 
     @PostMapping
     @Operation(summary = "주문 생성")
-    public ResponseEntity<OrderResponse> create(@AuthenticationPrincipal User user,
+    public ResponseEntity<OrderResponse> create(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                 @RequestBody OrderRequest request) {
-        Order created = orderService.createOrder(request, user);
+        Order created = orderService.createOrder(request, principal.getId());
         return ResponseEntity.ok(toResponse(created));
     }
 
     @PostMapping("/checkout")
     @Operation(summary = "장바구니 주문 생성 후 비우기")
-    public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal User user) {
-        Order created = orderService.createOrderFromCart(user.getId());
+    public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        Order created = orderService.createOrderFromCart(principal.getId());
         return ResponseEntity.ok(toResponse(created));
     }
 
@@ -102,5 +102,3 @@ public class OrderController {
                 .build();
     }
 }
-
-

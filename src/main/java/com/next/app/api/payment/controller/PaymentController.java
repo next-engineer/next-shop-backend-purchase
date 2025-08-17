@@ -3,7 +3,7 @@ package com.next.app.api.payment.controller;
 import com.next.app.api.payment.controller.dto.PaymentRequestDto;
 import com.next.app.api.payment.controller.dto.PaymentResponseDto;
 import com.next.app.api.payment.service.PaymentService;
-import com.next.app.api.user.entity.User;
+import com.next.app.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +23,17 @@ public class PaymentController {
 
     @PostMapping
     @Operation(summary = "결제 생성/승인")
-    public ResponseEntity<PaymentResponseDto> pay(@AuthenticationPrincipal User user,
+    public ResponseEntity<PaymentResponseDto> pay(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                   @RequestBody PaymentRequestDto req) {
-        paymentService.verifyOrderOwnership(req.getOrderId(), user.getId());
+        paymentService.verifyOrderOwnership(req.getOrderId(), principal.getId());
         return ResponseEntity.ok(paymentService.pay(req));
     }
 
     @PostMapping("/{paymentId}/cancel")
     @Operation(summary = "결제 취소/환불")
-    public ResponseEntity<PaymentResponseDto> cancel(@AuthenticationPrincipal User user,
+    public ResponseEntity<PaymentResponseDto> cancel(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @PathVariable Long paymentId) {
-        paymentService.verifyPaymentOwnership(paymentId, user.getId());
+        paymentService.verifyPaymentOwnership(paymentId, principal.getId());
         return ResponseEntity.ok(paymentService.cancel(paymentId));
     }
 
@@ -47,10 +47,9 @@ public class PaymentController {
 
     @GetMapping
     @Operation(summary = "주문 기준 결제 이력 조회")
-    public ResponseEntity<List<PaymentResponseDto>> listByOrder(@AuthenticationPrincipal User user,
+    public ResponseEntity<List<PaymentResponseDto>> listByOrder(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                                 @RequestParam Long orderId) {
-        paymentService.verifyOrderOwnership(orderId, user.getId());
+        paymentService.verifyOrderOwnership(orderId, principal.getId());
         return ResponseEntity.ok(paymentService.listByOrderId(orderId));
     }
 }
-

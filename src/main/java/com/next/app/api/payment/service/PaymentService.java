@@ -32,7 +32,6 @@ public class PaymentService {
             throw new IllegalArgumentException("paymentMethod is required");
         }
 
-        // 주문 소유권 검증은 Controller 단계에서 호출하거나 여기도 포함 가능
         Order order = orderService.getOrderOrThrow(req.getOrderId());
         if (order.getStatus() == OrderStatus.PAID) {
             throw new IllegalStateException("Order is already PAID");
@@ -51,7 +50,6 @@ public class PaymentService {
         payment.setPaidAt(LocalDateTime.now());
         Payment saved = paymentRepository.save(payment);
 
-        // 주문 상태 갱신
         orderService.updateOrderStatus(order.getId(), OrderStatus.PAID);
 
         return toDto(saved);
@@ -90,16 +88,12 @@ public class PaymentService {
                 .toList();
     }
 
-    // ==== 🔹 추가된 검증 메서드 ====
-
-    /** 주문이 현재 로그인한 사용자의 것인지 검증 */
     public void verifyOrderOwnership(Long orderId, Long userId) {
         if (!orderService.isOrderOwner(orderId, userId)) {
             throw new AccessDeniedException("해당 주문에 접근할 수 없습니다.");
         }
     }
 
-    /** 결제가 현재 로그인한 사용자의 주문에 속하는지 검증 */
     public void verifyPaymentOwnership(Long paymentId, Long userId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("결제를 찾을 수 없습니다."));
@@ -107,8 +101,6 @@ public class PaymentService {
             throw new AccessDeniedException("해당 결제에 접근할 수 없습니다.");
         }
     }
-
-    // ==== 🔹 내부 유틸 ====
 
     private String maskCard(String raw) {
         if (raw == null || raw.isBlank()) return null;

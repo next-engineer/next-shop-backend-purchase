@@ -30,11 +30,14 @@ public class CartService {
     public CartResponse getCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));
-
         return toCartResponse(cart);
     }
 
     public CartResponse addItem(Long userId, CartRequest request) {
+        if (request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
+
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다."));
 
@@ -55,11 +58,16 @@ public class CartService {
                     return newItem;
                 });
 
+        boolean isNewItem = (cartItem.getId() == null);
+
         cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
-        cartItem.setPrice(product.getPrice()); // 가격 보정
+        cartItem.setPrice(product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO);
         cartItemRepository.save(cartItem);
 
-        cart.addItem(cartItem);
+        if (isNewItem) {
+            cart.addItem(cartItem);
+        }
+        cart.calculateTotalPrice();
         cartRepository.save(cart);
 
         return toCartResponse(cart);
