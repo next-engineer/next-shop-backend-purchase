@@ -50,9 +50,10 @@ public class OrderController {
     @Operation(summary = "주문 생성")
     public ResponseEntity<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @RequestBody OrderRequest request) {
+        // 사용자 입력 배송지를 우선 사용, 빈 값일 경우 서비스에서 기본 배송지 처리 가능
         String deliveryAddress = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
                 ? request.getDelivery_address()
-                : "사용자 기본 배송 주소";  // 기존 기본값 유지
+                : "";  // 빈 문자열 또는 필요한 기본 처리 로직 적용
 
         Order order = orderService.createOrder(request, principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
@@ -64,7 +65,7 @@ public class OrderController {
                                                   @RequestBody(required = false) OrderRequest request) {
         String deliveryAddress = (request != null && request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
                 ? request.getDelivery_address()
-                : "사용자 기본 배송 주소"; // 기본 배송 주소
+                : ""; // 필요하면 서비스에서 기본배송지 설정
 
         Order order = orderService.createOrderFromCart(principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
