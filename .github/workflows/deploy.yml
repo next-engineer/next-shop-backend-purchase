@@ -1,54 +1,52 @@
-name: Deploy purchase API to ECS
+name: deploy-purchase-to-ecs
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches: [ "main" ]
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
-  CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
-  IMAGE_TAG_PREFIX: purchase
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: shop-repo
+  ECS_CLUSTER: shop-cluster
+  ECS_SERVICE: purchase-api-service
+  CONTAINER_NAME: purchase
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set IMAGE_TAG
-        id: vars
-        run: echo "IMAGE_TAG=${{ env.IMAGE_TAG_PREFIX }}-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
+          # access key 사용 시
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build image
-        run: docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.IMAGE_TAG }} .
+      - name: Build & Push
+        run: |
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${ECR_REPOSITORY}:${GITHUB_SHA}
+          docker build -t ${ECR_REPOSITORY}:${GITHUB_SHA} .
+          docker tag ${ECR_REPOSITORY}:${GITHUB_SHA} ${IMAGE_URI}
+          docker push ${IMAGE_URI}
+          echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
 
-      - name: Push image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.IMAGE_TAG }}
-
-      - name: Render task definition
-        id: render
+      - id: render
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ecs-taskdef.json
+          task-definition: .github/ecs/task-definition.json
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.IMAGE_TAG }}
+          image: ${{ env.IMAGE_URI }}
 
-      - name: Deploy ECS task definition
+      - name: Deploy
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}

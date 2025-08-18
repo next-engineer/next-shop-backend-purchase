@@ -8,12 +8,10 @@
   "taskRoleArn": "arn:aws:iam::077672914621:role/ecsAppTaskRole",
   "containerDefinitions": [
     {
-      "name": "purchase-api",
-      "image": "REPLACED_BY_ACTIONS",
+      "name": "purchase",
+      "image": "077672914621.dkr.ecr.ap-northeast-2.amazonaws.com/shop-repo:latest",
       "essential": true,
-      "portMappings": [
-        { "containerPort": 8082, "protocol": "tcp" }
-      ],
+      "portMappings": [{ "containerPort": 8082, "protocol": "tcp" }],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
