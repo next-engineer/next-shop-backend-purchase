@@ -1,16 +1,13 @@
 package com.next.app.api.order.controller.dto;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
 public class OrderRequest {
-
     private String delivery_address;
 
     @NotEmpty
@@ -21,10 +18,9 @@ public class OrderRequest {
         @NotNull
         private Long productId;
 
-        @Min(1)
-        private int quantity;
-
         @NotNull
         private BigDecimal price;
+
+        private int quantity;
     }
 }

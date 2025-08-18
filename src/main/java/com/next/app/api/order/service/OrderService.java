@@ -39,7 +39,8 @@ public class OrderService {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
-    public Order createOrderFromCart(Long userId, String deliveryAddress) {
+    // 장바구니 주문 생성 (기본배송지 defaultDeliveryAddress 사용)
+    public Order createOrderFromCart(Long userId, String defaultDeliveryAddress) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("장바구니가 없습니다."));
 
@@ -49,7 +50,10 @@ public class OrderService {
 
         Order order = new Order();
         order.setUserId(userId);
-        order.setDelivery_address(deliveryAddress);
+
+        // 배송지 필드명 통일: delivery_address
+        order.setDelivery_address(defaultDeliveryAddress);
+
         order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
 
@@ -80,7 +84,8 @@ public class OrderService {
         return savedOrder;
     }
 
-    public Order createOrder(OrderRequest request, Long userId, String deliveryAddress) {
+    // 주문 생성 (request 내부 배송지 있으면 사용, 없으면 기본 배송지 사용)
+    public Order createOrder(OrderRequest request, Long userId, String defaultDeliveryAddress) {
         if (request == null)
             throw new IllegalArgumentException("주문 요청이 누락되었습니다.");
         if (request.getItems() == null || request.getItems().isEmpty())
@@ -90,9 +95,14 @@ public class OrderService {
         order.setUserId(userId);
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
-        order.setDelivery_address(deliveryAddress);
+
+        // 배송지 처리: 요청에 있으면 우선 사용, 없으면 기본배송지 적용
+        String delivery = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
+                ? request.getDelivery_address() : defaultDeliveryAddress;
+        order.setDelivery_address(delivery);
 
         BigDecimal total = BigDecimal.ZERO;
+
         for (OrderRequest.Item item : request.getItems()) {
             if (item.getProductId() == null || item.getQuantity() <= 0)
                 throw new IllegalArgumentException("주문 아이템 정보가 부적절합니다.");
@@ -105,7 +115,7 @@ public class OrderService {
             orderItem.setProduct(product);
             orderItem.setQuantity(item.getQuantity());
 
-            BigDecimal price = item.getPrice() != null ? item.getPrice() : product.getPrice();
+            BigDecimal price = (item.getPrice() != null) ? item.getPrice() : product.getPrice();
             orderItem.setPrice(price != null ? price : BigDecimal.ZERO);
 
             total = total.add(orderItem.getPrice().multiply(BigDecimal.valueOf(orderItem.getQuantity())));
