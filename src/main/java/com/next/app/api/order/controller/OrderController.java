@@ -10,12 +10,10 @@ import com.next.app.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,10 +26,6 @@ import java.util.stream.Collectors;
 public class OrderController {
 
     private final OrderService orderService;
-    private final RestTemplate restTemplate;
-
-    @Value("${users.service.url}")
-    private String usersServiceUrl;
 
     @GetMapping("/{id}")
     @Operation(summary = "주문 단건 조회")
@@ -56,13 +50,10 @@ public class OrderController {
     @Operation(summary = "주문 생성")
     public ResponseEntity<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal principal,
                                                      @RequestBody OrderRequest request) {
+        // 사용자 입력 배송지를 우선 사용, 빈 값일 경우 서비스에서 기본 배송지 처리 가능
         String deliveryAddress = (request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
                 ? request.getDelivery_address()
-                : fetchUserDefaultDeliveryAddress(principal.getId());
-
-        if (deliveryAddress == null || deliveryAddress.isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
+                : "";  // 빈 문자열 또는 필요한 기본 처리 로직 적용
 
         Order order = orderService.createOrder(request, principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
@@ -74,11 +65,7 @@ public class OrderController {
                                                   @RequestBody(required = false) OrderRequest request) {
         String deliveryAddress = (request != null && request.getDelivery_address() != null && !request.getDelivery_address().isBlank())
                 ? request.getDelivery_address()
-                : fetchUserDefaultDeliveryAddress(principal.getId());
-
-        if (deliveryAddress == null || deliveryAddress.isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
+                : ""; // 필요하면 서비스에서 기본배송지 설정
 
         Order order = orderService.createOrderFromCart(principal.getId(), deliveryAddress);
         return ResponseEntity.ok(toResponse(order));
@@ -98,23 +85,6 @@ public class OrderController {
         return ResponseEntity.noContent().build();
     }
 
-    private String fetchUserDefaultDeliveryAddress(Long userId) {
-        try {
-            String url = usersServiceUrl + "/api/users/" + userId + "/delivery-address";
-            UserDeliveryResponse response = restTemplate.getForObject(url, UserDeliveryResponse.class);
-            return response != null ? response.getDeliveryAddress() : null;
-        } catch (Exception e) {
-            // 로깅 및 에러처리 필요
-            return null;
-        }
-    }
-
-    private static class UserDeliveryResponse {
-        private String deliveryAddress;
-        public String getDeliveryAddress() { return deliveryAddress; }
-        public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
-    }
-
     private OrderResponse toResponse(Order order) {
         return OrderResponse.builder()
                 .orderId(order.getId())
@@ -131,7 +101,8 @@ public class OrderController {
                                         oi.getQuantity(),
                                         oi.getPrice(),
                                         oi.getPrice().multiply(BigDecimal.valueOf(oi.getQuantity()))
-                                )).collect(Collectors.toList()))
+                                ))
+                                .collect(Collectors.toList()))
                 .build();
     }
 }
