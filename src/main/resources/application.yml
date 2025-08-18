@@ -32,8 +32,8 @@ spring:
 app:
   cors:
     # 프론트엔드 허용 도메인 (환경변수 FRONTEND_ORIGIN 없으면 기본값 사용)
-#    allowed-origin: ${FRONTEND_ORIGIN:http://shop.nextcloudlab.com}
-    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+    allowed-origin: ${FRONTEND_ORIGIN:http://shop.nextcloudlab.com}
+#    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
 
 jwt:
   # JWT 서명 시크릿 키 (32자 이상!)
