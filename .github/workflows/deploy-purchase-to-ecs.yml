@@ -1,0 +1,38 @@
+{
+  "family": "purchase-api-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::782683897698:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "purchase-api",
+      "image": "782683897698.dkr.ecr.ap-northeast-2.amazonaws.com/shop-purchase-api-ecr:latest",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 8082, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "container" },
+        { "name": "APP_CORS_ALLOWED_ORIGINS", "value": "https://d9gv73ip2rojg.cloudfront.net,http://localhost:3000,http://localhost:5173" },
+        { "name": "SERVER_PORT", "value": "8082" },
+        { "name": "TZ", "value": "Asia/Seoul" }
+      ],
+      "secrets": [
+        { "name": "DB_URL",      "valueFrom": "/nextshop/purchase/db/url" },
+        { "name": "DB_USERNAME", "valueFrom": "/nextshop/purchase/db/username" },
+        { "name": "DB_PASSWORD", "valueFrom": "/nextshop/purchase/db/password" },
+        { "name": "JWT_SECRET",  "valueFrom": "/nextshop/user/jwt_secret" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/purchase-api",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
