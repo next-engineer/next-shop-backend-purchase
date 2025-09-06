@@ -1,38 +1,88 @@
-{
-  "family": "purchase-api-task",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "512",
-  "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::782683897698:role/ecsTaskExecutionRole",
-  "containerDefinitions": [
-    {
-      "name": "purchase-api",
-      "image": "782683897698.dkr.ecr.ap-northeast-2.amazonaws.com/shop-purchase-api-ecr:latest",
-      "essential": true,
-      "portMappings": [
-        { "containerPort": 8082, "protocol": "tcp" }
-      ],
-      "environment": [
-        { "name": "SPRING_PROFILES_ACTIVE", "value": "container" },
-        { "name": "APP_CORS_ALLOWED_ORIGINS", "value": "https://d9gv73ip2rojg.cloudfront.net,http://localhost:3000,http://localhost:5173" },
-        { "name": "SERVER_PORT", "value": "8082" },
-        { "name": "TZ", "value": "Asia/Seoul" }
-      ],
-      "secrets": [
-        { "name": "DB_URL",      "valueFrom": "/nextshop/purchase/db/url" },
-        { "name": "DB_USERNAME", "valueFrom": "/nextshop/purchase/db/username" },
-        { "name": "DB_PASSWORD", "valueFrom": "/nextshop/purchase/db/password" },
-        { "name": "JWT_SECRET",  "valueFrom": "/nextshop/user/jwt_secret" }
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/purchase-api",
-          "awslogs-region": "ap-northeast-2",
-          "awslogs-stream-prefix": "ecs"
-        }
-      }
-    }
-  ]
-}
+name: deploy-purchase-to-ecs
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: shop-purchase-api-ecr
+  ECS_CLUSTER: shop-ecs-purchase-cluster
+  ECS_SERVICE: shop-ecs-purchase-task-service
+  CONTAINER_NAME: purchase-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 사전 점검
+      - name: Assert AWS_ROLE_TO_ASSUME is set
+        run: |
+          test -n "${{ secrets.AWS_ROLE_TO_ASSUME }}" || { echo "Missing secret: AWS_ROLE_TO_ASSUME"; exit 1; }
+          echo "Secret is set (value hidden)"
+
+      - name: Check OIDC availability
+        run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL}" ]; then
+            echo "No OIDC token available. Add 'permissions: id-token: write'."; exit 1;
+          fi
+          echo "OIDC token endpoint detected"
+
+      # OIDC로 AWS 자격 구성
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify assumed identity
+        run: |
+          aws sts get-caller-identity
+          acct=$(aws sts get-caller-identity --query Account --output text)
+          [ "$acct" = "782683897698" ] || { echo "Assumed wrong account: $acct" && exit 1; }
+
+      # ECR 로그인 + 빌드/푸시
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+
+      # 태스크 정의 렌더 & 배포
+      - name: Set image output
+        id: image
+        run: |
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Render task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .github/ecs/task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.image.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
