@@ -10,7 +10,7 @@ env:
   ECR_REPOSITORY: shop-purchase-api-ecr
   ECS_CLUSTER: shop-ecs-purchase-cluster
   ECS_SERVICE: shop-ecs-purchase-task-service
-  CONTAINER_NAME: purchase
+  CONTAINER_NAME: purchase-api
 
 jobs:
   deploy:
