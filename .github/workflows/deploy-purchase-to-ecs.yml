@@ -1,9 +1,9 @@
-name: deploy-purchase-to-ecs
+name: Deploy purchase-api to Amazon ECS
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 env:
   AWS_REGION: ap-northeast-2
@@ -11,6 +11,7 @@ env:
   ECS_CLUSTER: shop-ecs-purchase-cluster
   ECS_SERVICE: shop-ecs-purchase-task-service
   CONTAINER_NAME: purchase-api
+  TASK_DEFINITION_PATH: .github/ecs/task-definition.json
 
 jobs:
   deploy:
@@ -20,68 +21,40 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Assert AWS_ROLE_TO_ASSUME is set
-        run: |
-          test -n "${{ secrets.AWS_ROLE_TO_ASSUME }}" || { echo "Missing secret: AWS_ROLE_TO_ASSUME"; exit 1; }
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Verify assumed identity
-        run: aws sts get-caller-identity
-
-      # --- 여기서 task-def 파일의 컨테이너 이름을 출력/검증 ---
-      - name: Show task definition & container names
-        run: |
-          echo "---- task-def path ----"
-          ls -la .github/ecs
-          echo "---- names ----"
-          jq -r '.containerDefinitions[].name' .github/ecs/task-definition.json
-
-      - name: Assert container name matches
-        run: |
-          name=$(jq -r '.containerDefinitions[0].name' .github/ecs/task-definition.json)
-          echo "taskdef: $name / expected: $CONTAINER_NAME"
-          test "$name" = "$CONTAINER_NAME" || (echo "Mismatch! Fix container name in task-definition.json or CONTAINER_NAME env." && exit 1)
-
       - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build & Push to ECR
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-
-      - name: Set image output
-        id: image
+      - name: Build & Push image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          docker build -t $REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG -t $REGISTRY/${{ env.ECR_REPOSITORY }}:latest .
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:latest
 
       - name: Render task definition
-        id: render
+        id: taskdef
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: .github/ecs/task-definition.json
+          task-definition: ${{ env.TASK_DEFINITION_PATH }}
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.image.outputs.image }}
+          image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.render.outputs.task-definition }}
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true

@@ -4,6 +4,7 @@ import com.next.app.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -23,23 +24,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults())
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/health", "/actuator/health").permitAll()
-                        .requestMatchers(
-                                "/api/auth/login",
-                                "/api/users/register",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/actuator/**",
-                                "/api/products/**",
-                                "/api/categories/**"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/health", "/actuator/**").permitAll()   // ALB & actuator 허용
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/users/register",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/api/products/**",
+                    "/api/categories/**"
+                ).permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()   // CORS 프리플라이트 허용
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
